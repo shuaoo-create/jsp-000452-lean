@@ -1,0 +1,17 @@
+problem_id: JSP-000452
+source_id: Erdos561
+role: Lean formalization
+formalization_author_account: shuaoo-create
+formalization_assistance: OpenAI Codex
+mathematical_solver: Peilin Liu
+solution_doi: 10.5281/zenodo.23879458
+upstream_repository: google-deepmind/formal-conjectures
+upstream_commit: 2783e6edc3b2c80b5844978f74c3b325df8d82f5
+upstream_path: FormalConjectures/ErdosProblems/561.lean
+upstream_theorem: Erdos561.erdos_561
+lean: leanprover/lean4:v4.33.1
+mathlib_commit: 0df444a360eaa60ab8c11dca51a86af692955474
+proof_file: Proof/JSP452OfficialProof.lean
+proof_theorem: JSP452Audit.StarHost.erdos_561
+verification_entry: Proof/JSP452.lean
+build_target: JSP452

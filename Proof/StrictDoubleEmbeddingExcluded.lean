@@ -1,0 +1,86 @@
+import CubicOriginalDomination
+import CubicActualFifthsPrice
+namespace JSP452Audit.StarHost
+open SimpleGraph
+universe u
+
+private theorem at_original_three {s t r D : ℕ} (hs : 0<s) (ht : 0<t)
+    (n : Fin s→ℕ) (m : Fin t→ℕ) (hn : Antitone n) (hm : Antitone m) (pn : ∀i,1≤n i) (pm : ∀j,1≤m j)
+    {X : Type*} [Finite X] (G : SimpleGraph X) (K : DegreeRegion G D) (three:D=3)
+    (order : s≤t) (before : r<s) (head : n ⟨0,hs⟩=D) (opposite : m ⟨0,ht⟩=2)
+    (top : diagonal n m (r+2)=D+1) (cap : ∀v,Nat.card (G.neighborSet v)≤D)
+    (width : highestWidth n m r≤minimumExposure G D)
+    (row : ForcingRow G s t (padDemand n) (padDemand m) r) (live : 0<rowCount s t r)
+    (d : ℕ) (balance : matchingEdges G+d=rowCount s t r) (short : d<s)
+    (exposed : 1≤minimumExposure G D) (small : minimumExposure G D≤2) (deficit : minimumExposure G D+1≤d)
+    (budget : 3*minimumExposure G D+(rootShortfall G K.roots D+2*(G.induce K.roots).edgeSet.ncard+
+      crossCount G K.roots K.rest)≤2*highestWidth n m r+2)
+    (red : WholeListRegionAlternative G K.core n d) (blue : WholeListRegionAlternative G K.core m d)
+    (embedded : t≤matchingEdges (G.induce K.core)+d) (far : s+r+highestWidth n m r≤t)
+    : rowEnergy n m r≤G.edgeSet.ncard := by
+  subst D
+  obtain ⟨S,dom,price⟩ := cubic_original_dominating_set G K cap
+  exact cubic_full_axis_price_from_set hs ht n m hn hm pn pm G K order before head opposite top cap width row
+    live d balance short exposed small deficit budget red blue embedded far S dom price
+
+/-- Every ordinary core of a minimal strict source has an original list
+longer than its matching number plus the source deficit, in all degrees. -/
+theorem strict_source_one_list_escapes (F : StrictFamily.{u}) (paid : AllSmallerPaid.{u} F.rank)
+    (K : DegreeRegion F.G (diagonal F.n F.m (F.r+2)-1)) :
+    matchingEdges (F.G.induce K.core)+(F.rank-matchingEdges F.G)<max F.s F.t := by
+  let D := diagonal F.n F.m (F.r+2)-1
+  let d := F.rank-matchingEdges F.G
+  have least : 3≤D := strict_source_degree_at_least_three F paid
+  by_cases high : 4≤D
+  · exact strict_source_one_list_escapes_from_four F paid K high
+  have three : D=3 := by omega
+  by_contra! both
+  have axes := low_strict_original_axis F paid K (Or.inl three) both
+  have binary := strict_cubic_binary_axis F paid K three both
+  have mass := strict_source_whole_list_alternatives F K
+  obtain ⟨sr,tr⟩ := max_le_iff.mp both
+  obtain ⟨_,_,less,cap,_,_⟩ := minimal_rank_exact_source F paid
+  have strict := F.strict
+  have top : diagonal F.n F.m (F.r+2)=D+1 := by dsimp [D] at *;omega
+  have balance : matchingEdges F.G+d=rowCount F.s F.t F.r := by change _=F.rank;dsimp [d];omega
+  obtain ⟨one,width⟩ := row_minimum_exposure F.hs F.ht F.n F.m F.hn F.hm F.pn F.pm F.G F.r F.live F.row cap
+  have deficit := (minimal_strict_source_deficit F paid).2.1
+  obtain ⟨small,costs⟩ := (low_degree_original_costs F paid K).1 three
+  obtain ⟨nr,mr⟩ := strict_row_range F.hs F.ht F.n F.m F.hn F.hm F.pn F.pm F.G F.r F.row F.strict
+  obtain ⟨nL,mL⟩ := le_min_iff.mp (strict_source_strong_lengths F).1
+  change F.r+d+1≤F.s at nL
+  change F.r+d+1≤F.t at mL
+  rcases le_total F.s F.t with ord|ord
+  · obtain ⟨head,far,_⟩ := axes.1 ord
+    have opposite := (binary.1 ord).2.1
+    have p := at_original_three F.hs F.ht F.n F.m F.hn F.hm F.pn F.pm F.G K three ord (by omega) head opposite
+      top cap width F.row F.live d balance (by omega) (one.trans width) small deficit costs mass.1 mass.2 tr far
+    omega
+  · obtain ⟨head,far,_⟩ := axes.2 ord
+    have opposite := (binary.2 ord).2.1
+    have flipTop := (diagonal_swap F.m F.n (F.r+2)).trans top
+    have flipH := highest_width_colour_swap F.m F.n F.r
+    have flipRank : matchingEdges F.G+d=rowCount F.t F.s F.r := by simpa [rowCount,Nat.add_comm F.s F.t] using balance
+    have flipLive : 0<rowCount F.t F.s F.r := by simpa [rowCount,Nat.add_comm F.s F.t] using F.live
+    have flipRow := swap_positive_forcing_row F.G (padDemand F.n) (padDemand F.m) F.row
+    have p := at_original_three F.ht F.hs F.m F.n F.hm F.hn F.pm F.pn F.G K three ord (by omega) head opposite
+      flipTop cap (flipH.le.trans width) flipRow flipLive d flipRank (by omega) (one.trans width) small deficit
+      (by rw [flipH];exact costs) mass.2 mass.1 sr (by rw [flipH];exact far)
+    rw [row_energy_colour_swap F.m F.n] at p;omega
+
+/-- Failure of the original star-forest identity would now supply a
+minimal source with a genuinely escaping list in every ordinary region. -/
+theorem original_failure_has_escape {s t : ℕ} (hs:0<s) (ht:0<t) (n:Fin s→ℕ) (m:Fin t→ℕ)
+    (hn:Antitone n) (hm:Antitone m) (pn:∀i,1≤n i) (pm:∀j,1≤m j)
+    (fail : sizeRamsey (forest n) (forest m)≠∑i∈Finset.Icc 2 (s+t),diagonal n m i) :
+    ∃F:StrictFamily.{u},AllSmallerPaid.{u} F.rank ∧
+      (∀B:StrictFamily.{u},B.rank=F.rank → F.edges≤B.edges) ∧
+      (∀B:StrictFamily.{u},B.rank=F.rank → B.edges=F.edges → F.order≤B.order) ∧
+      ∀K:DegreeRegion F.G (diagonal F.n F.m (F.r+2)-1),
+        matchingEdges (F.G.induce K.core)+(F.rank-matchingEdges F.G)<max F.s F.t := by
+  obtain ⟨F,paid,edges,order⟩ := failure_has_smaller_rank_baseline.{u} hs ht n m hn hm pn pm fail
+  exact ⟨F,paid,edges,order,strict_source_one_list_escapes F paid⟩
+
+#print axioms strict_source_one_list_escapes
+#print axioms original_failure_has_escape
+end JSP452Audit.StarHost
